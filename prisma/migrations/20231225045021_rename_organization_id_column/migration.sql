@@ -1,0 +1,1 @@
+ALTER TABLE "User" RENAME COLUMN "organizationId" TO "organization_id";
