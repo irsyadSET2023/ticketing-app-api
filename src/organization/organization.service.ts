@@ -24,16 +24,6 @@ export class OrganizationService {
             },
           },
         });
-        //update user role
-        await prisma.user.update({
-          where: {
-            id: userId,
-          },
-          data: {
-            organization_id: organization.id,
-            role: 'ADMIN',
-          },
-        });
         return OrganizationResponse(organization);
       });
     } catch (error) {
@@ -63,7 +53,7 @@ export class OrganizationService {
   }
 
   async generateOrganizationKey(organizationId: number) {
-    const organizationKey = generateRandomString(16);
+    const organizationKey = await this.generateUniqueApiKey(16);
     const organizationUpdateData = await this.prisma.organization.update({
       where: {
         id: organizationId,
@@ -73,5 +63,21 @@ export class OrganizationService {
       },
     });
     return OrganizationResponse(organizationUpdateData);
+  }
+
+  async generateUniqueApiKey(length: number): Promise<string> {
+    const apiKey = generateRandomString(length);
+
+    const existingApiKey = await this.prisma.organization.findFirst({
+      where: {
+        api_key: apiKey,
+      },
+    });
+
+    if (existingApiKey) {
+      return this.generateUniqueApiKey(length);
+    }
+
+    return apiKey;
   }
 }

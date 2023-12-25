@@ -20,3 +20,12 @@ export class AuthRequest {
   @IsString()
   username: string;
 }
+
+export class VerifyRequest {
+  @IsEmail()
+  @IsNotEmpty()
+  email: string;
+  @IsString()
+  @IsNotEmpty()
+  validationToken: string;
+}

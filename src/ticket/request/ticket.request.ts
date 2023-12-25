@@ -20,6 +20,9 @@ export class CreateTicketRequest {
   @IsOptional()
   @IsEnum(TicketPriority)
   category: TicketPriority;
+  @IsString()
+  @IsNotEmpty()
+  apiKey: string;
 }
 
 export class UpdateTicketRequest {

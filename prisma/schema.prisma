@@ -11,31 +11,32 @@ datasource db {
 }
 
 model User {
-  id             Int             @id @default(autoincrement())
-  email          String          @unique
-  password       String
-  username       String?         @unique
-  role           Role?
+  id              Int                  @id @default(autoincrement())
+  email           String               @unique
+  password        String?
+  token           String?              @unique
+  is_validate     Boolean              @default(false)
+  username        String?              @unique
+  role            Role?
   organization_id Int?
-  organization   Organization?   @relation(fields: [organization_id], references: [id])
-  ticket Ticket[]
+  organization    Organization?        @relation(fields: [organization_id], references: [id])
   assigned_ticket UserAssignedTicket[]
-  created_at     DateTime        @default(now())
-  updated_at     DateTime        @default(now())
+  created_at      DateTime             @default(now())
+  updated_at      DateTime             @default(now())
 }
 
 model Organization {
-  id        Int      @id @default(autoincrement())
-  name      String?
-  api_key   String?
-  users     User[]   
-  tickets   Ticket[]
+  id         Int      @id @default(autoincrement())
+  name       String?
+  api_key    String?  @unique
+  users      User[]
+  tickets    Ticket[]
   created_at DateTime @default(now())
   updated_at DateTime @default(now())
 }
 
 model Ticket {
-  id                Int       @id @default(autoincrement())
+  id                Int                  @id @default(autoincrement())
   category          Category?
   message           String?
   platform          String?
@@ -43,29 +44,26 @@ model Ticket {
   developer_remarks String?
   status            String?
   organization_id   Int?
-  organization      Organization? @relation(fields: [organization_id], references: [id], onDelete: Cascade)
-  created_by Int?
-  user      User? @relation(fields: [created_by],references: [id],onDelete: Cascade) 
-  assigned_to UserAssignedTicket[]
-  created_at     DateTime        @default(now())
-  updated_at     DateTime        @default(now())
+  organization      Organization?        @relation(fields: [organization_id], references: [id], onDelete: Cascade)
+  assigned_to       UserAssignedTicket[]
+  created_at        DateTime             @default(now())
+  updated_at        DateTime             @default(now())
 }
 
-
-
 model UserAssignedTicket {
-  id       Int    @id @default(autoincrement())
-  userId   Int
-  user     User   @relation(fields: [userId], references: [id],onDelete: Cascade)
+  id                 Int      @id @default(autoincrement())
+  userId             Int
+  user               User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   assigned_ticket_id Int
-  assigned_ticket   Ticket @relation(fields: [assigned_ticket_id], references: [id],onDelete: Cascade)
-  created_at     DateTime        @default(now())
-  updated_at     DateTime        @default(now())
+  assigned_ticket    Ticket   @relation(fields: [assigned_ticket_id], references: [id], onDelete: Cascade)
+  created_at         DateTime @default(now())
+  updated_at         DateTime @default(now())
 }
 
 enum Role {
   USER
   ADMIN
+  SUPER_ADMIN
 }
 
 enum Category {
@@ -73,6 +71,3 @@ enum Category {
   MEDIUM
   IMPORTANT
 }
-
-
-

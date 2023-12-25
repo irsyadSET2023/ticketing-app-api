@@ -1,5 +1,6 @@
 import {
   IsAlphanumeric,
+  IsArray,
   IsEmail,
   IsEnum,
   IsNotEmpty,
@@ -30,6 +31,20 @@ export class UserUpdateRequest {
   @IsString()
   username: string;
   @IsOptional()
+  @IsEnum(UserRole)
+  role: UserRole;
+}
+export class InviteOrganizationMemberRequest {
+  @IsArray()
+  @IsNotEmpty()
+  memberList: MemberEntryRequest[];
+}
+
+export class MemberEntryRequest {
+  @IsEmail({}, { each: true })
+  @IsNotEmpty()
+  email: string;
+
   @IsEnum(UserRole)
   role: UserRole;
 }

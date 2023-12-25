@@ -1,6 +1,6 @@
 import { Body, Controller, HttpCode, HttpStatus, Post } from '@nestjs/common';
 import { AuthService } from './auth.service';
-import { AuthRequest } from './request';
+import { AuthRequest, VerifyRequest } from './request';
 import { parseMessage } from 'src/helper';
 
 @Controller('auth')
@@ -13,6 +13,14 @@ export class AuthController {
     const registerData = await this.authService.register(authRequest);
     return parseMessage(registerData, 'Log In');
   }
+
+  @Post('verify')
+  @HttpCode(HttpStatus.OK)
+  async verify(@Body() verifyRequest: VerifyRequest) {
+    const verifyData = await this.authService.verifyUser(verifyRequest);
+    return parseMessage(verifyData, 'User is verified');
+  }
+
   @Post('login')
   @HttpCode(HttpStatus.OK)
   async login(@Body() authRequest: AuthRequest) {

@@ -1,13 +1,17 @@
-import { ForbiddenException, Injectable } from '@nestjs/common';
+import {
+  ForbiddenException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { PrismaService } from 'src/prisma/prisma.service';
-import { AuthRequest } from './request';
+import { AuthRequest, VerifyRequest } from './request';
 import * as argon from 'argon2';
 import { PrismaClientKnownRequestError } from '@prisma/client/runtime/library';
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
 import { LoginResponse, RegisterResponse } from './response';
-import { response } from 'express';
-import { parseMessage } from 'src/helper';
+import { generateRandomString } from 'src/helper';
+import { Emailhtml, sendEmailDev } from 'src/services/email';
 
 @Injectable({})
 export class AuthService {
@@ -16,15 +20,33 @@ export class AuthService {
     private jwt: JwtService,
     private config: ConfigService,
   ) {}
-  async register(dto: AuthRequest) {
+  async register(authRequest: AuthRequest) {
     try {
-      const hashPassword = await argon.hash(dto.password);
+      const hashPassword = await argon.hash(authRequest.password);
+      let verificationToken = await this.generateUniqueToken(8);
+      const usersList = this.prisma.user.findMany();
+      (await usersList).forEach((user) => {
+        if (user.token === verificationToken) {
+          verificationToken = generateRandomString(8);
+        }
+      });
       const user = await this.prisma.user.create({
         data: {
-          ...dto,
+          ...authRequest,
           password: hashPassword,
+          token: verificationToken,
+          role: 'SUPER_ADMIN',
         },
       });
+
+      const emailHtml = Emailhtml(verificationToken, 'url');
+      await sendEmailDev(
+        '',
+        authRequest.email,
+        'Welcome to Organization',
+        'Welcome to Organization Text',
+        emailHtml,
+      );
       return RegisterResponse(user);
     } catch (error) {
       if (error instanceof PrismaClientKnownRequestError) {
@@ -35,17 +57,44 @@ export class AuthService {
       throw error;
     }
   }
-  async login(dto: AuthRequest) {
+
+  async verifyUser(verifyRequest: VerifyRequest) {
     try {
       const user = await this.prisma.user.findUnique({
         where: {
-          email: dto.email,
+          token: verifyRequest.validationToken,
+        },
+      });
+      if (!user) throw new NotFoundException('User Not found');
+
+      const verifiedUser = await this.prisma.user.update({
+        where: {
+          token: verifyRequest.validationToken,
+        },
+        data: {
+          is_validate: true,
+        },
+      });
+      return verifiedUser;
+    } catch (error) {
+      throw error;
+    }
+  }
+
+  async login(authRequest: AuthRequest) {
+    try {
+      const user = await this.prisma.user.findUnique({
+        where: {
+          email: authRequest.email,
         },
       });
 
       if (!user) throw new ForbiddenException('Invalid Credentials');
 
-      const verifyPassword = await argon.verify(user.password, dto.password);
+      const verifyPassword = await argon.verify(
+        user.password,
+        authRequest.password,
+      );
 
       if (!verifyPassword) throw new ForbiddenException('Invalid Credentials');
       const signToken = await this.signToken(
@@ -76,5 +125,21 @@ export class AuthService {
       expiresIn: '3600m',
       secret: secret,
     });
+  }
+
+  async generateUniqueToken(length: number): Promise<string> {
+    const verificationToken = generateRandomString(length);
+
+    const existingUser = await this.prisma.user.findFirst({
+      where: {
+        token: verificationToken,
+      },
+    });
+
+    if (existingUser) {
+      return this.generateUniqueToken(length);
+    }
+
+    return verificationToken;
   }
 }

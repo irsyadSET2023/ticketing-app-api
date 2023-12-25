@@ -22,20 +22,12 @@ import { parseMessage } from 'src/helper';
 export class TicketController {
   constructor(private ticketService: TicketService) {}
 
-  @UseGuards(JwtGuard)
   @Post()
   @HttpCode(HttpStatus.CREATED)
-  async createTicket(
-    @Req() req: Request,
-    @Body() createticketRequest: CreateTicketRequest,
-  ) {
-    const user = req.user as UserRequest;
-    const userId = user.userId;
-    const organizationId = user.organizationId;
-    console.log(createticketRequest);
+  async createTicket(@Body() createticketRequest: CreateTicketRequest) {
+    const apiKey = createticketRequest.apiKey;
     const ticketData = await this.ticketService.createTicket(
-      userId,
-      organizationId,
+      apiKey,
       createticketRequest,
     );
     return parseMessage(ticketData, 'Ticket is created');

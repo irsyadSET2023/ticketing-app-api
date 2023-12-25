@@ -2,7 +2,8 @@ import { Injectable } from '@nestjs/common';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { MyAccountResponse } from './response';
 import * as argon from 'argon2';
-import { UserUpdateRequest } from './request';
+import { MemberEntryRequest, UserUpdateRequest } from './request';
+import { Emailhtml, sendEmailDev } from 'src/services/email';
 
 @Injectable()
 export class UserService {
@@ -50,7 +51,34 @@ export class UserService {
     }
   }
 
-  async userForgotPassword() {}
+  async inviteMember(memberList: MemberEntryRequest[], organizationId: number) {
+    try {
+      const createOrganizationMembersData = memberList.map((member) => {
+        return {
+          ...member,
+          organization_id: organizationId,
+        };
+      });
+      const newOrganizationMembers = await this.prisma.user.createMany({
+        data: createOrganizationMembersData,
+      });
 
-  async inviteMember() {}
+      await Promise.all(
+        memberList.map(async (member) => {
+          const emailHtml = Emailhtml('userverificationtoken', 'userurl');
+          await sendEmailDev(
+            '',
+            member.email,
+            'Welcome to Organization',
+            'Welcome to Organization Text',
+            emailHtml,
+          );
+        }),
+      );
+
+      return newOrganizationMembers;
+    } catch (error) {}
+  }
+
+  async userForgotPassword() {}
 }

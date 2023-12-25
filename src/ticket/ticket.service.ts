@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { CreateTicketRequest } from './request';
 
@@ -6,25 +6,30 @@ import { CreateTicketRequest } from './request';
 export class TicketService {
   constructor(private prisma: PrismaService) {}
 
-  async createTicket(
-    userId: number,
-    organizationId: number,
-    createTicket: CreateTicketRequest,
-  ) {
+  async createTicket(apiKey: string, createTicket: CreateTicketRequest) {
     try {
       return this.prisma.$transaction(async (prisma) => {
         //create organization
-        const ticket = await prisma.ticket.create({
+
+        const organization = await prisma.organization.findUnique({
+          where: {
+            api_key: apiKey,
+          },
+          select: {
+            id: true,
+          },
+        });
+
+        if (!organization) {
+          throw new NotFoundException('Organization Not Found');
+        }
+        delete createTicket.apiKey;
+        const ticket = await this.prisma.ticket.create({
           data: {
             ...createTicket,
-            user: {
-              connect: {
-                id: userId,
-              },
-            },
             organization: {
               connect: {
-                id: organizationId,
+                id: organization.id,
               },
             },
           },
