@@ -6,16 +6,16 @@ const config = new ConfigService();
 const transport =
   config.get('NODE_ENV') === 'production'
     ? nodemailer.createTransport({
-        host: 'ec2-18-136-126-6.ap-southeast-1.compute.amazonaws.com',
-        port: '1025',
+        host: config.get('DEV_MAILPIT_HOST'),
+        port: config.get('DEV_MAILPIT_PORT'),
         auth: {
           user: config.get('DEV_MAILPIT_USER'),
           pass: config.get('DEV_MAILPIT_PASSWORD'),
         },
       })
     : nodemailer.createTransport({
-        host: 'ec2-18-136-126-6.ap-southeast-1.compute.amazonaws.com',
-        port: '1025',
+        host: config.get('DEV_MAILPIT_HOST'),
+        port: config.get('DEV_MAILPIT_PORT'),
         auth: {
           user: config.get('DEV_MAILPIT_USER'),
           pass: config.get('DEV_MAILPIT_PASSWORD'),
