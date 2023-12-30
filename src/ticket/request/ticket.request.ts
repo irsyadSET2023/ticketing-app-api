@@ -1,9 +1,12 @@
 import {
+  IsArray,
   IsEmail,
   IsEnum,
   IsNotEmpty,
+  IsNumber,
   IsOptional,
   IsString,
+  ValidateNested,
 } from 'class-validator';
 import { TicketPriority } from '../enum';
 
@@ -32,4 +35,11 @@ export class UpdateTicketRequest {
   @IsOptional()
   @IsString()
   status: string;
+}
+
+export class AssignTicketRequest {
+  @IsArray()
+  @IsNotEmpty()
+  @IsNumber({ allowInfinity: false, allowNaN: false }, { each: true })
+  membersId: number[];
 }

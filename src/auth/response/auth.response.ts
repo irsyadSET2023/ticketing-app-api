@@ -5,7 +5,7 @@ export const RegisterResponse = (user: any) => {
   };
 };
 
-export const LoginResponse = (user: any, jwtToken: String) => {
+export const LoginOrVerifyResponse = (user: any, jwtToken: String) => {
   delete user.password;
   return {
     ...user,

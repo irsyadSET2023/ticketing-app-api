@@ -1,9 +1,15 @@
-import { Injectable } from '@nestjs/common';
+import {
+  ForbiddenException,
+  Injectable,
+  NotFoundException,
+  UnauthorizedException,
+} from '@nestjs/common';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { MyAccountResponse } from './response';
 import * as argon from 'argon2';
 import { MemberEntryRequest, UserUpdateRequest } from './request';
 import { Emailhtml, sendEmailDev } from 'src/services/email';
+import { generateRandomString } from 'src/helper';
 
 @Injectable()
 export class UserService {
@@ -51,24 +57,36 @@ export class UserService {
     }
   }
 
-  async inviteMember(memberList: MemberEntryRequest[], organizationId: number) {
+  async inviteMember(
+    superAdminEmail: string,
+    memberList: MemberEntryRequest[],
+    organizationId: number,
+  ) {
     try {
-      const createOrganizationMembersData = memberList.map((member) => {
-        return {
-          ...member,
-          organization_id: organizationId,
-        };
-      });
+      await this.checkExistingEmail(memberList);
+      const newOrganizationMembersData = [];
+      await Promise.all(
+        memberList.map(async (member) => {
+          const token = await this.generateUniqueToken(8);
+          const newMemberData = {
+            ...member,
+            token,
+            organization_id: organizationId,
+          };
+          newOrganizationMembersData.push(newMemberData);
+        }),
+      );
+
       const newOrganizationMembers = await this.prisma.user.createMany({
-        data: createOrganizationMembersData,
+        data: newOrganizationMembersData,
       });
 
       await Promise.all(
-        memberList.map(async (member) => {
-          const emailHtml = Emailhtml('userverificationtoken', 'userurl');
+        newOrganizationMembersData.map(async (newMember) => {
+          const emailHtml = Emailhtml(newMember.token, 'userurl');
           await sendEmailDev(
-            '',
-            member.email,
+            superAdminEmail,
+            newMember.email,
             'Welcome to Organization',
             'Welcome to Organization Text',
             emailHtml,
@@ -77,8 +95,51 @@ export class UserService {
       );
 
       return newOrganizationMembers;
-    } catch (error) {}
+    } catch (error) {
+      throw error;
+    }
   }
 
   async userForgotPassword() {}
+
+  async generateUniqueToken(length: number): Promise<string> {
+    const verificationToken = generateRandomString(length);
+
+    const existingUser = await this.prisma.user.findFirst({
+      where: {
+        token: verificationToken,
+      },
+    });
+
+    if (existingUser) {
+      return this.generateUniqueToken(length);
+    }
+
+    return verificationToken;
+  }
+
+  async checkExistingEmail(memberList: MemberEntryRequest[]) {
+    const memberEmails = memberList.map((member) => {
+      return member.email;
+    });
+
+    const existingUsersEmails = await this.prisma.user.findMany({
+      where: {
+        email: {
+          in: memberEmails,
+        },
+      },
+    });
+
+    console.log(existingUsersEmails);
+
+    if (existingUsersEmails.length > 0) {
+      const existingEmails = existingUsersEmails.map((user) => user.email);
+      throw new NotFoundException({
+        message: 'Emails already exist',
+        existingEmails,
+      });
+    }
+    return true;
+  }
 }

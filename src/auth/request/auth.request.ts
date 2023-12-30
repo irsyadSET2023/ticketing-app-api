@@ -28,4 +28,10 @@ export class VerifyRequest {
   @IsString()
   @IsNotEmpty()
   validationToken: string;
+  @IsString()
+  @IsNotEmpty()
+  username: string;
+  @IsAlphanumeric()
+  @IsNotEmpty()
+  password: string;
 }

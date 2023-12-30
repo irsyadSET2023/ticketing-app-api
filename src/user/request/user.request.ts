@@ -14,6 +14,7 @@ export interface UserRequest {
   userId: number;
   email: string;
   organizationId: number | null;
+  role: UserRole | null;
 }
 
 export class UserUpdateRequest {

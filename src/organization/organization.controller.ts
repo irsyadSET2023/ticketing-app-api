@@ -1,6 +1,7 @@
 import {
   Body,
   Controller,
+  ForbiddenException,
   Get,
   HttpCode,
   HttpStatus,
@@ -15,12 +16,15 @@ import { UserRequest } from 'src/user/request';
 import { Request } from 'express';
 import { OrganizationService } from './organization.service';
 import { parseMessage } from 'src/helper';
+import { Roles, RolesGuard } from 'src/user/middleware';
+import { UserRole } from 'src/user/enum';
 
 @Controller('organization')
 export class OrganizationController {
   constructor(private organizationService: OrganizationService) {}
 
-  @UseGuards(JwtGuard)
+  @UseGuards(JwtGuard, RolesGuard)
+  @Roles(UserRole.SUPER_ADMIN)
   @Post()
   @HttpCode(HttpStatus.CREATED)
   async createOrganization(
@@ -29,6 +33,10 @@ export class OrganizationController {
   ) {
     const user = req.user as UserRequest;
     const userId = user.userId;
+
+    if (user.organizationId) {
+      throw new ForbiddenException('Already have organization');
+    }
     const organizationData = await this.organizationService.createOrganization(
       userId,
       createOrganizationRequest,
@@ -48,6 +56,7 @@ export class OrganizationController {
   }
 
   @UseGuards(JwtGuard)
+  @Roles(UserRole.SUPER_ADMIN)
   @Put('generate-key')
   @HttpCode(HttpStatus.CREATED)
   async generateOrganizationKey(@Req() req: Request) {

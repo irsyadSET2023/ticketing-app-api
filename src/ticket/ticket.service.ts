@@ -41,11 +41,43 @@ export class TicketService {
     }
   }
 
-  getTicket(ticketId: number) {
+  async getOrganizationTicket(organizationId: number) {
     try {
+      const organizationTicket = await this.prisma.ticket.findMany({
+        where: {
+          organization_id: organizationId,
+        },
+      });
+
+      return organizationTicket;
     } catch (error) {
       throw error;
     }
+  }
+
+  async assignTicketToMembers(ticketId: number, membersId: number[]) {
+    const membersAssignedTicketData = membersId.map((memberId) => {
+      return {
+        user_id: memberId,
+        ticket_id: ticketId,
+      };
+    });
+    const membersAssignedTicket = this.prisma.userAssignedTicket.createMany({
+      data: membersAssignedTicketData,
+    });
+    return membersAssignedTicket;
+  }
+
+  async getAssignedMemberTicket(memberId: number) {
+    const memberAssignedTicket = await this.prisma.userAssignedTicket.findMany({
+      where: {
+        user_id: memberId,
+      },
+      select: {
+        ticket: true,
+      },
+    });
+    return memberAssignedTicket;
   }
 
   async updateTicket(ticketId: number) {

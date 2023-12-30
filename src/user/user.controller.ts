@@ -19,6 +19,9 @@ import {
   UserUpdateRequest,
 } from './request';
 import { UpdateAccountResponse } from './response';
+import { UserRole } from './enum';
+import { RolesGuard } from './middleware/role.guard';
+import { Roles } from './middleware/role.decorator';
 
 @Controller('users')
 export class UserController {
@@ -35,7 +38,7 @@ export class UserController {
   @UseGuards(JwtGuard)
   @Put()
   @HttpCode(HttpStatus.OK)
-  async updateController(
+  async updateUser(
     @Req() req: Request,
     @Body() userUpdateRequest: UserUpdateRequest,
   ) {
@@ -48,7 +51,8 @@ export class UserController {
     return parseMessage(UpdateAccountResponse(updateData), 'Account Updated');
   }
 
-  @UseGuards(JwtGuard)
+  @UseGuards(JwtGuard, RolesGuard)
+  @Roles(UserRole.SUPER_ADMIN, UserRole.ADMIN)
   @Post('invite-member')
   @HttpCode(HttpStatus.CREATED)
   async inviteOrganizationMember(
@@ -56,12 +60,13 @@ export class UserController {
     @Body() inviteOrganizationMemberRequest: InviteOrganizationMemberRequest,
   ) {
     const user = req.user as UserRequest;
+    const superAdminEmail = user.email;
     const organizationId = user.organizationId;
-    console.log(inviteOrganizationMemberRequest.memberList);
 
     const memberList = inviteOrganizationMemberRequest.memberList;
 
     const newOrganizationMembers = await this.userService.inviteMember(
+      superAdminEmail,
       memberList,
       organizationId,
     );

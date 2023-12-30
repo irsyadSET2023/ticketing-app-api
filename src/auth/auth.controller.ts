@@ -2,6 +2,7 @@ import { Body, Controller, HttpCode, HttpStatus, Post } from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { AuthRequest, VerifyRequest } from './request';
 import { parseMessage } from 'src/helper';
+import { isVerified } from './middleware/auth.middleware';
 
 @Controller('auth')
 export class AuthController {
@@ -24,7 +25,10 @@ export class AuthController {
   @Post('login')
   @HttpCode(HttpStatus.OK)
   async login(@Body() authRequest: AuthRequest) {
-    const loginData = await this.authService.login(authRequest);
-    return parseMessage(loginData, 'Log In');
+    const isUserVerified = await isVerified(authRequest.email);
+    if (isUserVerified) {
+      const loginData = await this.authService.login(authRequest);
+      return parseMessage(loginData, 'Log In');
+    }
   }
 }

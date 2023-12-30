@@ -9,9 +9,10 @@ import * as argon from 'argon2';
 import { PrismaClientKnownRequestError } from '@prisma/client/runtime/library';
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
-import { LoginResponse, RegisterResponse } from './response';
+import { LoginOrVerifyResponse, RegisterResponse } from './response';
 import { generateRandomString } from 'src/helper';
 import { Emailhtml, sendEmailDev } from 'src/services/email';
+import { UserRole } from 'src/user/enum';
 
 @Injectable({})
 export class AuthService {
@@ -41,7 +42,7 @@ export class AuthService {
 
       const emailHtml = Emailhtml(verificationToken, 'url');
       await sendEmailDev(
-        '',
+        'admin-ticketing@mail.com',
         authRequest.email,
         'Welcome to Organization',
         'Welcome to Organization Text',
@@ -60,23 +61,39 @@ export class AuthService {
 
   async verifyUser(verifyRequest: VerifyRequest) {
     try {
-      const user = await this.prisma.user.findUnique({
+      const user = await this.prisma.user.findFirst({
         where: {
-          token: verifyRequest.validationToken,
+          AND: {
+            token: verifyRequest.validationToken,
+            email: verifyRequest.email,
+          },
         },
       });
       if (!user) throw new NotFoundException('User Not found');
-
+      const hashPassword = await argon.hash(verifyRequest.password);
       const verifiedUser = await this.prisma.user.update({
         where: {
           token: verifyRequest.validationToken,
         },
         data: {
           is_validate: true,
+          username: verifyRequest.username,
+          password: hashPassword,
         },
       });
-      return verifiedUser;
+
+      const signToken = await this.signToken(
+        user.id,
+        user.email,
+        user.organization_id,
+      );
+      return LoginOrVerifyResponse(verifiedUser, signToken);
     } catch (error) {
+      if (error instanceof PrismaClientKnownRequestError) {
+        if (error.code === 'P2002') {
+          throw new ForbiddenException('Credentials taken');
+        }
+      }
       throw error;
     }
   }
@@ -102,7 +119,7 @@ export class AuthService {
         user.email,
         user.organization_id,
       );
-      return LoginResponse(user, signToken);
+      return LoginOrVerifyResponse(user, signToken);
     } catch (error) {
       throw error;
     }
@@ -122,7 +139,7 @@ export class AuthService {
     const secret = this.config.get('JWT_SECRET');
 
     return this.jwt.signAsync(payload, {
-      expiresIn: '3600m',
+      expiresIn: 60 * 60 * 24 * 7 * 365,
       secret: secret,
     });
   }

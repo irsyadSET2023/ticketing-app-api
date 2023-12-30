@@ -41,8 +41,7 @@ model Ticket {
   message           String?
   platform          String?
   sender_email      String?
-  developer_remarks String?
-  status            String?
+  status            Status?
   organization_id   Int?
   organization      Organization?        @relation(fields: [organization_id], references: [id], onDelete: Cascade)
   assigned_to       UserAssignedTicket[]
@@ -52,10 +51,11 @@ model Ticket {
 
 model UserAssignedTicket {
   id                 Int      @id @default(autoincrement())
-  userId             Int
-  user               User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  assigned_ticket_id Int
-  assigned_ticket    Ticket   @relation(fields: [assigned_ticket_id], references: [id], onDelete: Cascade)
+  user_id            Int
+  user               User     @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  ticket_id          Int 
+  ticket             Ticket   @relation(fields: [ticket_id], references: [id], onDelete: Cascade)
+  remarks            String?
   created_at         DateTime @default(now())
   updated_at         DateTime @default(now())
 }
@@ -71,3 +71,11 @@ enum Category {
   MEDIUM
   IMPORTANT
 }
+
+enum Status{
+  Pending
+  Processed
+  Resolved
+}
+
+

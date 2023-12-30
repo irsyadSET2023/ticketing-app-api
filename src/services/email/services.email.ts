@@ -54,7 +54,7 @@ export const Emailhtml = (
           letter-spacing: -0.6px;
         "
       >
-        nextest
+        Ticketing App
       </h3>
     </header>
     <div
